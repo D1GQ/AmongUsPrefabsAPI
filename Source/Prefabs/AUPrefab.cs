@@ -22,7 +22,7 @@ public static class AUPrefab
     /// <returns>An instance of the requested prefab component if found, otherwise null.</returns>
     private static T? LoadAsset<T>(GameObject? parent = null, bool cache = false) where T : Component
     {
-        Component? obj = Resources.FindObjectsOfTypeAll(Il2CppType.Of<T>()).FirstOrDefault()?.Cast<T>();
+        Component? obj = Resources.FindObjectsOfTypeAll(Il2CppType.Of<T>()).FirstOrDefault(com => com.Cast<T>().GetIl2CppType() == Il2CppType.Of<T>())?.Cast<T>();
         if (obj != null)
         {
             var instance = parent != null
