@@ -11,30 +11,29 @@ namespace AmongUsPrefabs.Prefabs;
 public static class AUPrefab
 {
     private static readonly List<string> CachedTypes = [];
-    private static readonly Dictionary<string, GameObject> Cached = [];
+    private static readonly Dictionary<string, GameObject?> Cached = [];
+    private static readonly Dictionary<string, GameObject?> TempCached = [];
 
-    /// <summary>
-    /// Loads an asset of type <typeparamref name="T"/> from resources and optionally caches it.
-    /// </summary>
-    /// <typeparam name="T">The component type of the prefab.</typeparam>
-    /// <param name="parent">The parent GameObject to attach the instantiated prefab to (optional).</param>
-    /// <param name="cache">Determines whether the prefab should be cached for future use.</param>
-    /// <returns>An instance of the requested prefab component if found, otherwise null.</returns>
-    private static T? LoadAsset<T>(GameObject? parent = null, bool cache = false) where T : Component
+    private static T? LoadPrefab<T>(GameObject? parent = null, int cacheType = 0) where T : Component
     {
+        string name = typeof(T).Name;
         Component? obj = Resources.FindObjectsOfTypeAll(Il2CppType.Of<T>()).FirstOrDefault(com => com.Cast<T>().GetIl2CppType() == Il2CppType.Of<T>())?.Cast<T>();
         if (obj != null)
         {
-            var instance = parent != null
-                ? UnityEngine.Object.Instantiate(obj.gameObject, parent.transform)
-                : UnityEngine.Object.Instantiate(obj.gameObject);
-            instance.name = instance.name.Replace("(Clone)", "") + "(AUPrefab)";
+            var instance = parent != null ? UnityEngine.Object.Instantiate(obj.gameObject, parent.transform) : UnityEngine.Object.Instantiate(obj.gameObject);
 
-            if (cache)
+            instance.name = instance.name.Replace("(Clone)", "");
+            if (cacheType == 1)
             {
-                CachedTypes.Add(typeof(T).Name);
-                Cached[typeof(T).Name] = instance.gameObject;
+                instance.name += "(AUPrefab)";
+                CachedTypes.Add(name);
+                Cached[name] = instance.gameObject;
                 UnityEngine.Object.DontDestroyOnLoad(instance.gameObject);
+            }
+            else if (cacheType == 2)
+            {
+                instance.name += "(AUTemp)";
+                TempCached[name] = instance;
             }
 
             return instance.GetComponent<T>();
@@ -44,14 +43,31 @@ public static class AUPrefab
     }
 
     /// <summary>
-    /// Loads a prefab of type <typeparamref name="T"/> without caching it.
+    /// Copies a prefab of type <typeparamref name="T"/> without caching it.
     /// </summary>
     /// <typeparam name="T">The component type of the prefab.</typeparam>
     /// <param name="parent">The parent GameObject to attach the instantiated prefab to (optional).</param>
     /// <returns>An instance of the requested prefab component if found, otherwise null.</returns>
-    public static T? LoadPrefab<T>(GameObject? parent = null) where T : Component
+    public static T? CopyPrefab<T>(GameObject? parent = null) where T : Component
     {
-        return LoadAsset<T>(parent);
+        return LoadPrefab<T>(parent);
+    }
+
+    /// <summary>
+    /// Retrieves a temporarily cached prefab of type <typeparamref name="T"/>.
+    /// If the prefab is not already cached, it will be loaded and temporarily cached for future use.
+    /// Note: Temporarily cached prefabs can be destroyed on load, unlike cached prefabs.
+    /// </summary>
+    /// <typeparam name="T">The component type of the prefab.</typeparam>
+    /// <returns>An instance of the requested prefab component if found, otherwise null.</returns>
+    public static T? GetTempPrefab<T>() where T : Component
+    {
+        if (TempCached.TryGetValue(typeof(T).Name, out var obj) && obj != null)
+        {
+            return obj.GetComponent<T>();
+        }
+
+        return LoadPrefab<T>(null, 2);
     }
 
     /// <summary>
@@ -61,17 +77,17 @@ public static class AUPrefab
     /// <typeparam name="T">The component type of the prefab.</typeparam>
     /// <returns>The cached instance of the requested prefab.</returns>
     /// <exception cref="InvalidOperationException">Thrown if the requested prefab is not cached.</exception>
-    public static T? GetPrefab<T>() where T : Component
+    public static T? GetCachedPrefab<T>() where T : Component
     {
         if (!CachedTypes.Contains(typeof(T).Name))
             throw new InvalidOperationException("Unable to get a prefab that hasn't been cached!");
 
-        if (Cached.TryGetValue(typeof(T).Name, out var obj))
+        if (Cached.TryGetValue(typeof(T).Name, out var obj) && obj != null)
         {
             return obj.GetComponent<T>();
         }
 
-        return LoadAsset<T>(null, true);
+        return null;
     }
 
     /// <summary>
@@ -85,7 +101,7 @@ public static class AUPrefab
         if (CachedTypes.Contains(typeof(T).Name))
             throw new InvalidOperationException("Unable to cache a prefab that's already been cached!");
 
-        LoadAsset<T>(null, true);
+        LoadPrefab<T>(null, 1);
     }
 
     /// <summary>
