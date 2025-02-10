@@ -8,7 +8,7 @@ namespace AmongUsPrefabs.Prefabs;
 /// This class provides functionality to load, cache, retrieve, and remove prefabs dynamically.
 /// It ensures that prefabs can be instantiated, stored, and managed efficiently without requiring Unity Editor access.
 /// </summary>
-public abstract class AUPrefab
+public static class AUPrefab
 {
     private static readonly List<string> CachedTypes = [];
     private static readonly Dictionary<string, GameObject> Cached = [];
